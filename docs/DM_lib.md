@@ -14,6 +14,7 @@ int registerType(){
 (static information)
 
 ```c
+// 
 typedef GlobalAddress (*Dependence) (GlobalAddress gaddr);
  
 typedef struct AddrDependence {
@@ -55,6 +56,14 @@ GlobalAddress disaggAlloc(int type_id, int count){
 void disaggFree(GlobalAddress gaddr, uint64_t size){
     // Mira does not implement disaggFree in its code
     // To support `disaggFree`, we need to implement garbage collection
+
+    // Why does Mira not implement free function? I think it should be "without GC, we need disaggFree".
+    // Free function should always exist though otherwise it will leak remote memory.
+    // Also no need to care about double-free - it should not happen in normal programs in the first place.
+    // (that is, we transform the program correctly only when)
+    // We just replace free() call with our version.
+    //
+    // p.s. if malloc() and free() are libc functions, what transforms them into the form of `mem` dialect?
 }
 ```
 

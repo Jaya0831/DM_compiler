@@ -1,11 +1,10 @@
-#include "Type.h"
-using namespace std;
+#include "type.h"
 
-int registerType(Type type) {
+int register_type(type_t type) {
 
 }
 
-int registerStruct(){
+int register_struct(){
     /*
         references:
             1. https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
