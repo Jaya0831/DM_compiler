@@ -4,6 +4,9 @@ sources := $(wildcard src/*.c)
 objects := $(sources:.c=.o)
 headers := $(wildcard src/*.h)
 
+deps := ibverbs
+deps_flags := $(patsubst %,-l%,$(deps))
+
 mkdir_out := mkdir -p out
 
 all: build
@@ -18,4 +21,4 @@ $(objects): %.o: %.c $(headers)
 
 out/$(name): $(objects)
 	$(mkdir_out)
-	$(CC) -o $@ $< $(LDFLAGS)
+	$(CC) -o $@ $^ $(deps_flags) $(LDFLAGS)
