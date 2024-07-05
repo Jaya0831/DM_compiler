@@ -2,9 +2,9 @@ name := memory-server
 
 sources := $(wildcard src/*.c)
 objects := $(sources:.c=.o)
-headers := $(wildcard src/*.h)
+headers := $(wildcard src/*.h) $(wildcard ../common/*.h)
 
-deps := ibverbs
+deps := ibverbs rdmacm
 deps_flags := $(patsubst %,-l%,$(deps))
 
 mkdir_out := mkdir -p out
@@ -17,8 +17,8 @@ clean:
 	rm -rf out
 
 $(objects): %.o: %.c $(headers)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 out/$(name): $(objects)
 	$(mkdir_out)
-	$(CC) -o $@ $^ $(deps_flags) $(LDFLAGS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(deps_flags)

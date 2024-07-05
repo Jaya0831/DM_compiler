@@ -12,8 +12,8 @@ typedef struct cache_token {
 } cache_token_t;
 
 cache_token_t cache_request(global_addr_t gaddr);
-void *cache_access(global_addr_t token);
-void *cache_access_mut(global_addr_t token);
+void* cache_access(global_addr_t token);
+void* cache_access_mut(global_addr_t token);
 
 #ifdef __cplusplus
 }
