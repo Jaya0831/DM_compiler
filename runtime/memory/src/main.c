@@ -27,4 +27,6 @@ static struct argp argp = {options, parse_opt, args_doc, doc};
 int main(int argc, char** argv) {
   struct arguments args = {};
   argp_parse(&argp, argc, argv, 0, 0, &args);
+
+  // TODO: main loop, poll cq, respond client
 }

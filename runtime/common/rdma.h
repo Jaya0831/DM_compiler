@@ -15,6 +15,21 @@
 
 #include "try.h"
 
+// Wait for a certain type of CM event, regarding others as error.
+static int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
+                        struct rdma_cm_id** conn_id) {
+  struct rdma_cm_event* ev;
+  try(rdma_get_cm_event(events, &ev), "cannot get CM event");
+  if (ev->event != type) {
+    fprintf(stderr, "expected %s, got %s\n", rdma_event_str(type), rdma_event_str(ev->event));
+    return -1;
+  }
+  // fprintf(stderr, "ayy!! %s\n", rdma_event_str(type));
+  if (conn_id) *conn_id = ev->id;
+  rdma_ack_cm_event(ev);
+  return 0;
+}
+
 struct message {
   enum message_kind {
     MSG_REQ_CHUNK,    // compute request memory for new chunk
@@ -86,9 +101,13 @@ static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, bo
     .qp_type = IBV_QPT_RC,
     .send_cq = c->cq,
     .recv_cq = c->cq,
-    .cap = {.max_send_wr = 4, .max_recv_wr = 4, .max_send_sge = 1, .max_recv_sge = 1},
+    .cap = {.max_send_wr = 32, .max_recv_wr = 4, .max_send_sge = 1, .max_recv_sge = 1},
   };
   try3(rdma_create_qp(id, c->pd, &attr), "cannot create queue pair");
+
+  // pre-post recv
+  try3(rdma_post_recv(c->id, NULL, c->recv_buf, sizeof(*c->recv_buf), c->recv_mr),
+       "failed to RDMA recv");
 
   return c;
 
@@ -114,6 +133,7 @@ static inline int _rdma_conn_poll_evented(struct rdma_connection* conn, struct i
         return -(errno = EBADMSG);
       }
       // nothing inside queue right now, register and wait for next event
+      // TODO: busy poll for a certain number of times
       try(ibv_req_notify_cq(conn->cq, false), "cannot request for completion queue notification");
       return _rdma_conn_poll_evented(conn, wc_list + polled_len, wc_len - polled_len,
                                      ack_count + 1);
@@ -162,8 +182,6 @@ static inline int rdma_conn_send(struct rdma_connection* conn, bool poll_now) {
 
 // For `poll_now`, see above.
 static inline int rdma_conn_recv(struct rdma_connection* conn, bool poll_now) {
-  try(rdma_post_recv(conn->id, NULL, conn->recv_buf, sizeof(*conn->recv_buf), conn->recv_mr),
-      "failed to RDMA recv");
   if (poll_now) {
     struct ibv_wc wc;
     try(rdma_conn_poll(conn, &wc, 1), "failed to poll");
@@ -172,6 +190,8 @@ static inline int rdma_conn_recv(struct rdma_connection* conn, bool poll_now) {
       return -(errno = EBADMSG);
     }
   }
+  try(rdma_post_recv(conn->id, NULL, conn->recv_buf, sizeof(*conn->recv_buf), conn->recv_mr),
+      "failed to RDMA recv");
   return 0;
 }
 

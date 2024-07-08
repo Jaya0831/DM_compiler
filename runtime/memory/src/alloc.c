@@ -8,6 +8,7 @@
 static chunk_t* chunks = NULL;
 static int chunk_count = 0;
 
+// TODO: use context
 int chunk_create(uint16_t type_size, uint16_t max_count) {
   // TODO: this should be synchronised
   chunks = realloc(chunks, (chunk_count + 1) * sizeof(chunk_t));

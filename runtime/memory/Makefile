@@ -9,6 +9,8 @@ deps_flags := $(patsubst %,-l%,$(deps))
 
 mkdir_out := mkdir -p out
 
+.PHONY: build
+
 all: build
 build: out/$(name)
 
