@@ -4,13 +4,15 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "Type.h"
+#include "GlobalAddress.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-void* disaggAlloc(Type type, int count){}
+GlobalAddress disaggAlloc(uint8_t typeID, size_t size, int count){}
+void disaggFree(GlobalAddress gaddr, size_t size){}
 
 
 #ifdef __cplusplus

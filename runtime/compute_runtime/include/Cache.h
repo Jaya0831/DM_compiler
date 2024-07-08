@@ -16,8 +16,8 @@ typedef struct CacheToken {
 }CacheToken;
 
 CacheToken cacheRequest(GlobalAddress gaddr){}
-void* cacheAccess(GlobalAddress token){}
-void* cacheAccessMut(GlobalAddress token){}
+void* cacheAccess(CacheToken token){}
+void* cacheAccessMut(CacheToken token){}
 
 #ifdef __cplusplus
 }

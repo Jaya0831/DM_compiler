@@ -1,6 +1,12 @@
 {
   "files.associations": {
-    "iostream": "cpp"
+    "iostream": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "limits": "cpp",
+    "new": "cpp",
+    "tuple": "cpp",
+    "typeinfo": "cpp"
   },
   "C_Cpp_Runner.cCompilerPath": "clang",
   "C_Cpp_Runner.cppCompilerPath": "clang++",

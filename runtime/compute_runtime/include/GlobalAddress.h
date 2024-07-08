@@ -9,11 +9,10 @@ extern "C"
 {
 #endif
 
-typedef union GlobalAddress{
+typedef union {
     struct {
-        uint64_t nodeID:8;
-        uint64_t cacheID:8; // start from 3 for compatibility
-        uint64_t lAddr:48;
+        uint64_t cacheID:8; // start from 3 (reserve cacheID 0 to 2)
+        uint64_t lAddr:56;
     };
     uint64_t val;
 }GlobalAddress;

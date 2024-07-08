@@ -8,6 +8,11 @@ Discussion:
 - For the `store` operation, do we need to fetch the corresponding object if it is not in the cache?
 - chunk per thread?
 - cache size
-- Do we need recompile?
+- Run & recompile?
     - cache size
     - offloading decision
+
+
+Version 1.0:
+- Only caching (No offloading)
+- Only consider the `struct` type
