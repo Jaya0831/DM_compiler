@@ -1,71 +1,122 @@
 ### Type
 (static information)
-
-// TODO: how to manage array/struct/... (data structure)
-// TODO: auto load default types
-
+__We only consider `struct` in version1.0__
 ```c
-int registerType(){
+// Type of the runtime objects
+typedef enum {
+    STRUCT
+    // TODO:
+} ObjectType;
 
-}
+typedef enum {
+    INT,
+    FLOAT,
+    DOUBLE,
+    POINTER,
+    ARRAY,
+    STRUCT,
+    UNKNOWN
+    // TODO:
+} Type;
+
+typedef struct LLVMStruct;
+
+typedef struct {
+    Type type;
+    size_t size;
+    size_t alignment;
+
+    // to handle Additional Parametric Types
+    union {
+        ElementType *pointeeType; // for POINTER type
+        struct {
+            ElementType *elementType;
+            size_t elementNum;
+        } arrayInfo; //for ARRAY type
+        LLVMStruct *structType; // for nested STRUCT type
+        // TODO: other additional parametric types
+    } info;
+} ElementType;
+
+typedef struct {
+    ElementType elementType;
+    char *name;  // name of the element (if applicable)
+    size_t offset; // offset of the element within the struct
+} LLVMStructElement;
+
+typedef struct {
+    char *name;  // name of the struct
+    size_t elementNum;  // number of elements in the struct
+    LLVMStructElement *elements;  // array of elements
+} LLVMStruct;
+
+// we do not consider `LLVMArray` type in v1.0
+typedef struct {
+    char *name;
+    size_t elementNum;
+    ElementType *elementType;
+} LLVMArray;
+
+// TODO: registerStruct & registerArray
+// called by registerStruct & registerArray
+int addLLVMStruct(uint8_t typeID, LLVMStruct structLayout){}
+// we do not consider `array` type in v1.0
+int addLLVMArray(uint8_t typeID, LLVMArray arrayInfo){}
 ```
 
 ### Address Dependence
 (static information)
 
 ```c
-typedef GlobalAddress (*Dependence) (GlobalAddress gaddr);
- 
+typedef GlobalAddress (*DataDependence) (GlobalAddress gaddr);
+
+// in version1.0, we only consider 1 to 1 Address Dependence
 typedef struct AddrDependence {
-    uint64_t type_id1;
-    Dependence computation;
-    uint64_t type_id2;
+    uint64_t typeID1;
+    DataDependence dataDependence;
+    uint64_t TypeID2;
 }AddrDependence;
 
-int registerAddrDependence(uint64_t type_id1, Dependence computation, uint64_t type_id2){
+int registerAddrDependence(uint64_t typeID1, DataDependence dependence, uint64_t typeID2){
     // add new AddrDependence
 }
 ```
-__We do not need to maintain the dependency information between objects during runtime in version1__
-// TODO: 
+__We do not need to maintain the dynamic dependency information between objects during runtime in version1.0__
 
 ### GlobalAddress
 reference: dex/include/GlobalAddress.h
 
-1. A 48-bit space to carry a local memory address of a particular server
-2. `memory_server_id` bits to identify and differentiate memory nodes in Disaggregated Memory settings (Dex)
-3. `Type_id` bits to indicate the `Type` of the object (similar to Mira's `cache_id` bits)
+1. A 56-bit space to carry a local memory address of a particular server
+2. `Type_id` bits to indicate the `Type` of the object (similar to Mira's `cache_id` bits)
 
 GlobalAddress:
-- [memory_server_id:8, cache_id:8, address:48]
+- [Type_id:8, address:56]
 
 ### Global Allocation
 ```c
-GlobalAddress disaggAlloc(int type_id, int count){
-    GlobalAddress gaddr = tryAlloc(type_id, count);
+GlobalAddress disaggAlloc(uint8_t typeID, size_t size, int count){
+    GlobalAddress gaddr = tryAlloc(typeID, count);
     if(gaddr){
         return gaddr;
     }
     else{
-        requestChunk(thread_id);
-        return tryAlloc(type_id, count);
+        requestChunk();
+        return tryAlloc(typeID, count);
     }
 }
 
-void disaggFree(GlobalAddress gaddr, uint64_t size){
-    // Mira does not implement disaggFree in its code
-    // To support `disaggFree`, we need to implement garbage collection
+void disaggFree(GlobalAddress gaddr, size_t size){
+    // no need in version1.0
 }
 ```
 
 ### Caching
-// TODO: cache structure?
 ```c
 // load->cache_request&cache_access
 // store->cache_request&cache_access_mut
 // TODO: check or guarantee the data is still in the cache when the actual local access occurs
 
-cache_token cacheRequest(GlobalAddress gaddr){
+CacheToken cacheRequest(GlobalAddress gaddr){
     // refer to Mira/runtime/libcommon/lib/cache.c
     // gaddr: the global address the program request
     // return the corresponding local cache token
@@ -75,25 +126,25 @@ cache_token cacheRequest(GlobalAddress gaddr){
         return toCacheToken(gaddr);
     }
     
-    cache_token=checkCache(gaddr);
-    if(cache_token){
-        // markNoEvict(cache_token);
-        return cache_token
+    CacheToken=checkCache(gaddr);
+    if(CacheToken){
+        // markNoEvict(CacheToken);
+        return CacheToken
     }
     else{
-        // markNoEvict(cache_token);
+        // markNoEvict(CacheToken);
         return remoteFetch(gaddr);
     }
 }
 
-void* cacheAccess(cache_token token){
+void* cacheAccess(CacheToken token){
     // refer to Mira/runtime/libcommon/lib/cache.c
     // return the corresponding local address
 
     return toLocalAddr(token);
 }
 
-void* cacheAccessMut(cache_token token){
+void* cacheAccessMut(CacheToken token){
     // refer to Mira/runtime/libcommon/lib/cache.c
     // return the corresponding local address
 
@@ -104,26 +155,26 @@ void* cacheAccessMut(cache_token token){
 
 ### Offloading
 ```c
-typedef void (*rpc_service_t)(void *arg, void *ret);
+typedef void (*RPCService)(void *arg, void *ret);
 
 
-cache_token cacheRequestOfld(bool *suc, uint64_t func_id, void *arg, void *ret){ // maybe some extra arguments that indicate the objects we need to protect
+CacheToken cacheRequestOfld(bool *suc, uint64_t funcID, void *arg, void *ret){ // maybe some extra arguments that indicate the objects we need to protect
     if(isLocal(gaddr)){
         return toCacheToken(gaddr);
     }
-    if(cache_token){
-        // markNoEvict(cache_token);
-        return cache_token
+    if(CacheToken){
+        // markNoEvict(CacheToken);
+        return CacheToken
     }
     else{
         // try offload
-        *suc = ofldFunc(func_id, arg, ret); // maybe some extra arguments that indicate the objects we need to protect
-        // markNoEvict(cache_token);
+        *suc = ofldFunc(funcID, arg, ret); // maybe some extra arguments that indicate the objects we need to protect
+        // markNoEvict(CacheToken);
         return remoteFetch(gaddr);
     }
 }
 
-bool ofldFunc(uint64_t func_id, void *arg, void *ret){
+bool ofldFunc(uint64_t funcID, void *arg, void *ret){
     // To guarantee the consistency, we need to set I/O flags & flush related data, and propagate data back
     // rpc call
 }

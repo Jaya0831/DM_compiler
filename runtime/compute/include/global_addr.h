@@ -9,7 +9,7 @@ extern "C" {
 
 typedef union global_addr {
   struct {
-    uint8_t cache_id : 8; // start from 3 for compatibility
+    uint8_t cache_id : 8; // start from 3 (reserve cache_id 0 to 2)
     uint64_t offset : 56;
   };
   uint64_t val;

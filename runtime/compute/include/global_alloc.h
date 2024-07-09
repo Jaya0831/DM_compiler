@@ -1,13 +1,16 @@
 #ifndef _COMPUTE_GLOBAL_ALLOC_H_
 #define _COMPUTE_GLOBAL_ALLOC_H_
 
-#include "type.h"
+#include <stdlib.h>
+
+#include "global_addr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void *disagg_alloc(type_t type, int count);
+global_addr_t disagg_alloc(uint8_t type_id, size_t size, int count);
+void disagg_free(global_addr_t gaddr);
 
 #ifdef __cplusplus
 }
