@@ -7,13 +7,13 @@
 extern "C" {
 #endif
 
-struct cache_token {
+typedef struct cache_token {
   // TODO: define cache token
-};
+}cache_token;
 
-struct cache_token cache_request(global_addr_t gaddr);
-void* cache_access(struct cache_token token);
-void* cache_access_mut(struct cache_token token);
+cache_token cache_request(global_addr_t gaddr);
+void* cache_access(cache_token token);
+void* cache_access_mut(cache_token token);
 
 #ifdef __cplusplus
 }
