@@ -12,7 +12,7 @@
 #define RESOLVE_TIMEOUT_MS 500
 
 int rdma_client_free(struct rdma_client* client) {
-  int ret;
+  int ret = 0;
   if (client->conn) {
     ret = rdma_conn_free(client->conn);
     if (ret < 0) perror("failed to free RDMA connection");
@@ -24,9 +24,9 @@ int rdma_client_free(struct rdma_client* client) {
 
 struct rdma_client* rdma_client_connect(struct sockaddr* addr) {
   struct rdma_client* client = try2_p(calloc(1, sizeof(*client)));
-  client->rdma_events = try3_p(rdma_create_event_channel(), "failed to create RDMA event channel");
-
   struct rdma_cm_id *id = NULL, *id2;
+
+  client->rdma_events = try3_p(rdma_create_event_channel(), "failed to create RDMA event channel");
   try3(rdma_create_id(client->rdma_events, &id, NULL, RDMA_PS_TCP), "failed to create RDMA ID");
 
   // Resolve remote address and route

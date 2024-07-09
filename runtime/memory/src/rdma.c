@@ -30,7 +30,7 @@ struct rdma_server* rdma_server_create(struct sockaddr* addr) {
   try3(rdma_listen(server->listen_id, 8), "failed to listen");
 
   // Get CM ID for the connection
-  struct rdma_cm_id* conn_id;
+  struct rdma_cm_id* conn_id = NULL;
   try3(expect_event(server->rdma_events, RDMA_CM_EVENT_CONNECT_REQUEST, &conn_id));
   server->conn = try3_p(rdma_conn_create(conn_id, true), "failed to create connection");
 

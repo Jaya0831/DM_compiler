@@ -1,13 +1,5 @@
 #include "type.h"
 
-int register_type(type_t type) {
-  return 0;
-}
+int register_struct(uint8_t type_id, struct struct_repr layout) { return 0; }
 
-int register_struct() {
-  /*
-    references:
-      1. https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
-  */
-  return 0;
-}
+int register_array(uint8_t type_id, struct llvm_array layout) { return 0; }

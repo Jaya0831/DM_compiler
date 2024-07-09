@@ -8,64 +8,63 @@
 extern "C" {
 #endif
 
-// types we care about
-typedef enum {
-  OBJ_STRUCT,
-  // TODO:
-} ObjectType;
+struct struct_repr;
 
-typedef enum {
-  TYPE_INT,
-  TYPE_FLOAT,
-  TYPE_DOUBLE,
-  TYPE_POINTER,
-  TYPE_ARRAY,
-  TYPE_STRUCT,
-  TYPE_UNKNOWN
-  // TODO:
-} Type;
-
-struct llvm_struct;
-
-struct element_type {
-  Type type;
+struct type {
+  // we care about struct and array (and pointer?)
+  // lzl: if we only care about these, why don't we just make every other type `TYPE_OTHER` or
+  // something?
+  enum type_kind {
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_DOUBLE,
+    TYPE_POINTER,
+    TYPE_ARRAY,
+    TYPE_STRUCT,
+    TYPE_UNKNOWN
+    // TODO: other types
+  } kind;
   size_t size;
   size_t alignment;
 
   // to handle Additional Parametric Types
   union {
-    struct element_type *pointeeType;  // for POINTER type
+    // for TYPE_POINTER
+    struct type* pointee;
+
+    // for TYPE_ARRAY
     struct {
-      struct element_type *elementType;
-      size_t elementNum;
-    } arrayInfo;             // for ARRAY type
-    struct llvm_struct *structType;  // for nested STRUCT type
-                             // TODO: other additional parametric types
-  } info;
+      struct type* elem_type;
+      size_t elem_num;
+    };
+
+    // for nested TYPE_STRUCT
+    struct struct_repr* repr;
+
+    // TODO: other additional parametric types
+  };
 };
 
-struct llvm_struct_element {
-  struct element_type type;
-  char *name;     // name of the element (if applicable)
-  size_t offset;  // offset of the element within the struct
-} LLVMStructElement;
-
-struct llvm_struct {
-  char *name;                   // name of the struct
-  size_t elementNum;            // number of elements in the struct
-  struct llvm_struct_element *elements;  // array of elements
+// reference: https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
+struct struct_repr {
+  const char* name;  // name of the struct
+  struct struct_elem {
+    const char* name;  // name of the element (if applicable)
+    struct type type;  // type of the element
+    size_t offset;     // offset of the element within the struct
+  }* elems;            // array of elements
+  size_t elem_num;     // number of elements in the struct
 };
 
 // we do not consider `LLVMArray` type in v1.0
 struct llvm_array {
-  char *name;
-  size_t elementNum;
-  struct element_type *elementType;
+  const char* name;
+  struct type* type;
+  size_t len;
 };
 
-// TODO: registerStuct & registerArray
-int addLLVMStruct(uint8_t typeID, struct llvm_struct structLayout) {}
-int addLLVMArray(uint8_t typeID, struct llvm_array arrayInfo) {}
+int register_struct(uint8_t type_id, struct struct_repr layout);
+int register_array(uint8_t type_id, struct llvm_array layout);
 
 #ifdef __cplusplus
 }

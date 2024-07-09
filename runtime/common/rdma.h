@@ -16,7 +16,7 @@
 #include "try.h"
 
 // Wait for a certain type of CM event, regarding others as error.
-static int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
+static inline int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
                         struct rdma_cm_id** conn_id) {
   struct rdma_cm_event* ev;
   try(rdma_get_cm_event(events, &ev), "cannot get CM event");

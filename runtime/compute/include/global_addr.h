@@ -7,13 +7,21 @@
 extern "C" {
 #endif
 
-typedef union global_addr {
+union global_addr {
   struct {
     uint8_t cache_id : 8; // start from 3 (reserve cache_id 0 to 2)
     uint64_t offset : 56;
   };
   uint64_t val;
-} global_addr_t;
+};
+
+// data dependency
+typedef union global_addr (*data_dep_t)(union global_addr gaddr);
+
+struct addr_dep {
+  uint8_t type1, type2;
+  data_dep_t dep;
+};
 
 #ifdef __cplusplus
 }

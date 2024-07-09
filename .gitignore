@@ -54,3 +54,6 @@ dkms.conf
 compile_commands.json
 .cache
 out/
+
+.DS_Store
+.vscode/
