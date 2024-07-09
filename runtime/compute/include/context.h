@@ -11,7 +11,7 @@ struct compute_context {
     struct rdma_event_channel* rdma_events;
     struct rdma_connection* conn;
   } rdma;
-  // TODO: cache, chunks, ...
+  // TODO: cache, chunks ref, ...
 };
 
 #endif

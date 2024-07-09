@@ -11,6 +11,8 @@ tests_objects := $(tests_sources:.c=.o)
 
 mkdir_out := mkdir -p out
 
+CFLAGS += -fPIC
+
 .PHONY: build build-shared build-static build-tests clean
 
 all: build
@@ -35,4 +37,4 @@ out/lib$(name).a: $(objects)
 	$(AR) rcs $@ $^
 
 out/run-test: $(tests_objects) out/lib$(name).a
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^ -libverbs -lrdmacm
