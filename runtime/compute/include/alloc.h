@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "global_addr.h"
+#include "addr.h"
 
 #ifdef __cplusplus
 extern "C" {

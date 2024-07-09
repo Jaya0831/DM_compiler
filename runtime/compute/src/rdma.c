@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include "../../common/try.h"
-#include "context.h"
 #include "rdma.h"
 
 #define RESOLVE_TIMEOUT_MS 500

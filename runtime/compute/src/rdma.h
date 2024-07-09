@@ -3,7 +3,12 @@
 
 #include <rdma/rdma_cma.h>
 
-#include "context.h"
+#include "../../common/rdma.h"
+
+struct rdma_client {
+  struct rdma_event_channel* rdma_events;
+  struct rdma_connection* conn;
+};
 
 struct rdma_client* rdma_client_connect(struct sockaddr* addr);
 int rdma_client_free(struct rdma_client* client);

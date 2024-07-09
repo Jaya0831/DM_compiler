@@ -1,17 +1,11 @@
 #ifndef _COMPUTE_CONTEXT_H_
 #define _COMPUTE_CONTEXT_H_
 
-#include <rdma/rdma_cma.h>
-
-#include "../../common/rdma.h"
-
 // Compute-side context used during DM application runtime.
-struct compute_context {
-  struct rdma_client {
-    struct rdma_event_channel* rdma_events;
-    struct rdma_connection* conn;
-  } rdma;
-  // TODO: cache, chunks ref, ...
-};
+struct compute_context;
+
+// Create compute context, and connect to memory server.
+struct compute_context* compute_context_connect();
+int compute_context_free(struct compute_context* ctx);
 
 #endif

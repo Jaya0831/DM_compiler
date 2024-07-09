@@ -1,70 +1,67 @@
 #ifndef _COMPUTE_TYPE_H_
 #define _COMPUTE_TYPE_H_
 
-#include <stdint.h>
 #include <stdlib.h>
+
+#include "context.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct struct_repr;
+// we care about struct and array (and pointer?)
+// other types could just be defined by global const...
+enum type_kind {
+  TYPE_STRUCT,
+  TYPE_ARRAY,
+  TYPE_POINTER,
+  TYPE_OTHER,
+};
 
 struct type {
-  // we care about struct and array (and pointer?)
-  // lzl: if we only care about these, why don't we just make every other type `TYPE_OTHER` or
-  // something?
-  enum type_kind {
-    TYPE_INT,
-    TYPE_FLOAT,
-    TYPE_DOUBLE,
-    TYPE_POINTER,
-    TYPE_ARRAY,
-    TYPE_STRUCT,
-    TYPE_UNKNOWN
-    // TODO: other types
-  } kind;
+  enum type_kind kind;
   size_t size;
-  size_t alignment;
-
   // to handle Additional Parametric Types
   union {
+    // for nested TYPE_STRUCT
+    struct {
+      struct struct_repr* struct_repr;
+      size_t alignment;
+    };
+    // for TYPE_ARRAY
+    struct array_repr* array_repr;
     // for TYPE_POINTER
     struct type* pointee;
-
-    // for TYPE_ARRAY
-    struct {
-      struct type* elem_type;
-      size_t elem_num;
-    };
-
-    // for nested TYPE_STRUCT
-    struct struct_repr* repr;
-
-    // TODO: other additional parametric types
   };
 };
 
+// ...like this
+// extern const struct type* INT_TYPE;
+
+// struct representation
 // reference: https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
 struct struct_repr {
-  const char* name;  // name of the struct
-  struct struct_elem {
-    const char* name;  // name of the element (if applicable)
-    struct type type;  // type of the element
-    size_t offset;     // offset of the element within the struct
-  }* elems;            // array of elements
-  size_t elem_num;     // number of elements in the struct
+  const char* name;           // name of the struct
+  struct struct_elem* elems;  // array of elements
+  size_t elem_num;            // number of elements in the struct
 };
 
+struct struct_elem {
+  const char* name;   // name of the element (if applicable)
+  struct type* type;  // type of the element
+  size_t offset;      // offset of the element within the struct
+};
+
+// array representation
 // we do not consider `LLVMArray` type in v1.0
-struct llvm_array {
-  const char* name;
+struct array_repr {
   struct type* type;
   size_t len;
 };
 
-int register_struct(uint8_t type_id, struct struct_repr layout);
-int register_array(uint8_t type_id, struct llvm_array layout);
+// returns type id (uint8_t)
+int register_struct(struct compute_context* ctx, struct struct_repr layout);
+int register_array(struct compute_context* ctx, struct array_repr layout);
 
 #ifdef __cplusplus
 }

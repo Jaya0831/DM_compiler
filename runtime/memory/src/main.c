@@ -36,7 +36,8 @@ int main(int argc, char** argv) {
   struct arguments args = {};
   argp_parse(&argp, argc, argv, 0, 0, &args);
 
-  struct memory_context* ctx = try_p(memory_context_create(), "failed to initialize memory context");
+  struct memory_context* ctx =
+    try_p(memory_context_create(), "failed to initialize memory context");
   // TODO: main loop, poll cq, respond client
 
   return 0;

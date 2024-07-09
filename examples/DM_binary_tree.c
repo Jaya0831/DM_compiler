@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "cache.h"
-#include "global_addr.h"
-#include "global_alloc.h"
+#include "addr.h"
+#include "alloc.h"
 
 
 // registerStruct
@@ -32,7 +33,7 @@ global_addr_t createNode(int key) {
 
     // original: newNodePtr->key = key;
     // For the real implementation, we send (newNodeGAddr + offset(key)) to cacheRequest directly
-    cache_token token = cache_request(newNodeGAddr);
+    struct cache_token token = cache_request(newNodeGAddr);
     TreeNode* newNodeLPtr = (TreeNode*)cache_access_mut(token);
     newNodeLPtr->key = key;
 
@@ -65,7 +66,7 @@ global_addr_t insert(global_addr_t rootGAddr, int key) {
     }
 
     // original: if (key < rootPtr->key) {
-    cache_token token = cache_request(rootGAddr);
+    struct cache_token token = cache_request(rootGAddr);
     TreeNode* rootLPtr = (TreeNode*)cache_access(token);
     if (key < rootLPtr->key) {
 
@@ -103,7 +104,7 @@ global_addr_t search(global_addr_t nodeGAddr, int key) {
     while (nodeGAddr.val != NULL) {
 
         // original: if (nodePtr->key == key) {
-        cache_token token = cache_request(nodeGAddr);
+        struct cache_token token = cache_request(nodeGAddr);
         TreeNode* nodeLPtr = (TreeNode*)cache_access(token);
         if (nodeLPtr->key == key) {
 

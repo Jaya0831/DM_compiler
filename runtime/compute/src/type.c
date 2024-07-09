@@ -1,5 +1,15 @@
 #include "type.h"
 
-int register_struct(uint8_t type_id, struct struct_repr layout) { return 0; }
+// const struct type* INT_TYPE = &(struct type){.kind = TYPE_OTHER, .size = sizeof(int)};
+// const struct type* FLOAT_TYPE = &(struct type){.kind = TYPE_OTHER, .size = sizeof(float)};
+// const struct type* DOUBLE_TYPE = &(struct type){.kind = TYPE_OTHER, .size = sizeof(double)};
 
-int register_array(uint8_t type_id, struct llvm_array layout) { return 0; }
+int register_struct(struct compute_context* ctx, struct struct_repr layout) {
+  // TODO
+  return 0;
+}
+
+int register_array(struct compute_context* ctx, struct array_repr layout) {
+  // TODO
+  return 0;
+}
