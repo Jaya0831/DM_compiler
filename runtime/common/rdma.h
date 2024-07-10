@@ -49,19 +49,17 @@ struct rdma_connection {
 static inline int rdma_conn_free(struct rdma_connection* conn) {
   if (conn->id) {
     rdma_destroy_qp(conn->id);
-    try(rdma_destroy_id(conn->id), "failed to destroy connection ID");
+    rdma_destroy_id(conn->id);
   }
 
-  if (conn->send_mr)
-    try_e(ibv_dereg_mr(conn->send_mr), "failed to deregister message send buffer MR");
-  if (conn->recv_mr)
-    try_e(ibv_dereg_mr(conn->recv_mr), "failed to deregister message recv buffer MR");
+  if (conn->send_mr) ibv_dereg_mr(conn->send_mr);
+  if (conn->recv_mr) ibv_dereg_mr(conn->recv_mr);
   if (conn->send_buf) free(conn->send_buf);
   if (conn->recv_buf) free(conn->recv_buf);
 
-  if (conn->cq) try_e(ibv_destroy_cq(conn->cq), "failed to destroy completion queue");
-  if (conn->cc) try_e(ibv_destroy_comp_channel(conn->cc), "failed to destroy completion channel");
-  if (conn->pd) try_e(ibv_dealloc_pd(conn->pd), "failed to deallocate protection domain");
+  if (conn->cq) ibv_destroy_cq(conn->cq);
+  if (conn->cc) ibv_destroy_comp_channel(conn->cc);
+  if (conn->pd) ibv_dealloc_pd(conn->pd);
 
   free(conn);
   return 0;
@@ -69,10 +67,11 @@ static inline int rdma_conn_free(struct rdma_connection* conn) {
 
 // use_event: true to enable completion event notification that could be used in epoll, false to
 // use busy poll and get lower latency
-static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, bool use_event) {
+static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, struct ibv_pd* pd,
+                                                       bool use_event) {
   struct rdma_connection* c = try2_p(calloc(1, sizeof(*c)));
   c->id = id;
-  c->pd = try3_p(ibv_alloc_pd(id->verbs), "cannot allocate protection domain");
+  c->pd = pd;
 
   if (use_event) {
     c->cc = try3_p(ibv_create_comp_channel(id->verbs), "cannot create completion channel");

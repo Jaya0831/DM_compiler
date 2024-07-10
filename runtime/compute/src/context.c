@@ -9,7 +9,7 @@
 #include "rdma.h"
 
 int compute_context_free(struct compute_context* ctx) {
-  if (ctx->rdma) try(rdma_client_free(ctx->rdma), "failed to free client");
+  if (ctx->rdma) rdma_client_free(ctx->rdma);
   free(ctx);
   return 0;
 }
