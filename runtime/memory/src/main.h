@@ -10,20 +10,23 @@
 /* rdma.c */
 
 struct rdma_server {
-  struct rdma_event_channel* rdma_events;
+  struct rdma_event_channel* events;
   struct rdma_cm_id* listen_id;
   struct rdma_connection* conn;
+  struct ibv_mr* mem_pool_mr;
 };
 
-struct rdma_server* rdma_server_create(struct ibv_pd* pd, struct sockaddr* addr,
-                                       void* handshake_data, size_t handshake_data_len);
+struct rdma_server* rdma_server_create(struct sockaddr* addr, void* mem_pool, size_t mem_pool_size,
+                                       size_t page_size);
 int rdma_server_free(struct rdma_server* server);
 
 /* context.c */
 
 struct memory_context {
   struct rdma_server* rdma;
-  struct ibv_mr* mem_pool;
+  void* mem_pool;
+  size_t mem_pool_size;
+  size_t page_size;
 };
 
 struct memory_context* memory_context_create(uint16_t listen_port, size_t mem_pool_size);

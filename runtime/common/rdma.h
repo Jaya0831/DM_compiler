@@ -16,8 +16,8 @@
 #include "try.h"
 
 // Wait for a certain type of CM event, regarding others as error.
-static inline int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
-                               struct rdma_cm_id** conn_id) {
+static inline int _expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
+                                struct rdma_cm_id** conn_id, struct rdma_conn_param* param) {
   struct rdma_cm_event* ev;
   try(rdma_get_cm_event(events, &ev), "cannot get CM event");
   if (ev->event != type) {
@@ -27,8 +27,24 @@ static inline int expect_event(struct rdma_event_channel* events, enum rdma_cm_e
   }
   fprintf(stderr, "ayy!! %s\n", rdma_event_str(type));
   if (conn_id) *conn_id = ev->id;
+  if (param) *param = ev->param.conn;
   rdma_ack_cm_event(ev);
   return 0;
+}
+
+static inline int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type) {
+  return _expect_event(events, type, NULL, NULL);
+}
+
+static inline int expect_connect_request(struct rdma_event_channel* events,
+                                         struct rdma_cm_id** conn_id,
+                                         struct rdma_conn_param* param) {
+  return _expect_event(events, RDMA_CM_EVENT_CONNECT_REQUEST, conn_id, param);
+}
+
+static inline int expect_established(struct rdma_event_channel* events,
+                                     struct rdma_conn_param* param) {
+  return _expect_event(events, RDMA_CM_EVENT_ESTABLISHED, NULL, param);
 }
 
 // Current version seems to only need RDMA read and write, without control messages. Reserved for
@@ -67,11 +83,10 @@ static inline int rdma_conn_free(struct rdma_connection* conn) {
 
 // use_event: true to enable completion event notification that could be used in epoll, false to
 // use busy poll and get lower latency
-static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, struct ibv_pd* pd,
-                                                       bool use_event) {
+static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, bool use_event) {
   struct rdma_connection* c = try2_p(calloc(1, sizeof(*c)));
   c->id = id;
-  c->pd = pd;
+  c->pd = try3_p(ibv_alloc_pd(c->id->verbs), "cannot allocate protection domain");
 
   if (use_event) {
     c->cc = try3_p(ibv_create_comp_channel(id->verbs), "cannot create completion channel");

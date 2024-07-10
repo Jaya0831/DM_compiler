@@ -1,23 +1,26 @@
+#include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../common/handshake.h"
 #include "../../common/rdma.h"
 #include "main.h"
 
 int rdma_server_free(struct rdma_server* server) {
-  try(rdma_conn_free(server->conn), "failed to free RDMA connection");
+  if (server->conn) rdma_conn_free(server->conn);
+  if (server->mem_pool_mr) ibv_dereg_mr(server->mem_pool_mr);
   if (server->listen_id) rdma_destroy_id(server->listen_id);
-  if (server->rdma_events) rdma_destroy_event_channel(server->rdma_events);
+  if (server->events) rdma_destroy_event_channel(server->events);
   return 0;
 }
 
 // TODO: pass MR information to compute side
-struct rdma_server* rdma_server_create(struct ibv_pd* pd, struct sockaddr* addr,
-                                       void* handshake_data, size_t handshake_data_len) {
-  struct rdma_server* server = try2_p(calloc(1, sizeof(*server)));
-  server->rdma_events = try3_p(rdma_create_event_channel(), "failed to create RDMA event channel");
-  try3(rdma_create_id(server->rdma_events, &server->listen_id, NULL, RDMA_PS_TCP),
+struct rdma_server* rdma_server_create(struct sockaddr* addr, void* mem_pool, size_t mem_pool_size,
+                                       size_t page_size) {
+  struct rdma_server* server = try2_p(calloc(1, sizeof(*server)), "1");
+  server->events = try3_p(rdma_create_event_channel(), "failed to create RDMA event channel");
+  try3(rdma_create_id(server->events, &server->listen_id, NULL, RDMA_PS_TCP),
        "failed to create listen ID");
 
   // Bind and listen for client to connect
@@ -28,17 +31,28 @@ struct rdma_server* rdma_server_create(struct ibv_pd* pd, struct sockaddr* addr,
   try3(rdma_listen(server->listen_id, 8), "failed to listen");
 
   // Get CM ID for the connection
-  // TODO: also get `rdma_conn_param`
   struct rdma_cm_id* conn_id = NULL;
-  struct rdma_conn_param conn_param = {};
-  try3(expect_event(server->rdma_events, RDMA_CM_EVENT_CONNECT_REQUEST, &conn_id));
-  server->conn = try3_p(rdma_conn_create(conn_id, pd, true), "failed to create connection");
+  struct rdma_conn_param param = {};
+  try3(expect_connect_request(server->events, &conn_id, &param), "failed");
+  server->conn = try3_p(rdma_conn_create(conn_id, true), "failed to create connection");
 
-  conn_param.private_data = handshake_data;
-  conn_param.private_data_len = handshake_data_len;
+  server->mem_pool_mr =
+    try3_p(ibv_reg_mr(server->conn->pd, mem_pool, mem_pool_size, IBV_ACCESS_LOCAL_WRITE),
+           "cannot register memory region");
 
-  try3(rdma_accept(server->conn->id, NULL), "failed to accept");
-  try3(expect_event(server->rdma_events, RDMA_CM_EVENT_ESTABLISHED, NULL));
+  // Accept parameters that compute side had proposed, plus memory-side handshake data (MR info,
+  // etc.)
+  struct memory_info hs = {
+    .addr = (uintptr_t)server->mem_pool_mr->addr,
+    .rkey = server->mem_pool_mr->rkey,
+    .page_size = page_size,
+    .page_count = mem_pool_size / page_size,
+  };
+  param.private_data = &hs;
+  param.private_data_len = sizeof(hs);
+
+  try3(rdma_accept(server->conn->id, &param), "failed to accept");
+  try3(expect_established(server->events, NULL));
 
   return server;
 

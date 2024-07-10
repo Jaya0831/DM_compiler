@@ -4,10 +4,12 @@
 #include <rdma/rdma_cma.h>
 
 #include "../../common/rdma.h"
+#include "../../common/handshake.h"
 
 struct rdma_client {
   struct rdma_event_channel* rdma_events;
   struct rdma_connection* conn;
+  struct memory_info mem;
 };
 
 struct rdma_client* rdma_client_connect(struct sockaddr* addr);

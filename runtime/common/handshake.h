@@ -6,11 +6,11 @@
 #include <stdint.h>
 
 // Can't think of anything that compute side need to pass to memory side for now.
-struct compute_handshake {
+struct compute_info {
   uint8_t _reserved[16];
 };
 
-struct memory_handshake {
+struct memory_info {
   uint64_t addr, page_size;
   uint32_t rkey, page_count;
 };

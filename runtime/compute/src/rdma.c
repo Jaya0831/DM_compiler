@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../common/handshake.h"
 #include "../../common/try.h"
 #include "rdma.h"
 
@@ -26,18 +27,26 @@ struct rdma_client* rdma_client_connect(struct sockaddr* addr) {
 
   // Resolve remote address and route
   try3(rdma_resolve_addr(id, NULL, addr, RESOLVE_TIMEOUT_MS), "failed to resolve address");
-  try3(expect_event(client->rdma_events, RDMA_CM_EVENT_ADDR_RESOLVED, NULL));
+  try3(expect_event(client->rdma_events, RDMA_CM_EVENT_ADDR_RESOLVED));
   try3(rdma_resolve_route(id, RESOLVE_TIMEOUT_MS), "failed to resolve route");
-  try3(expect_event(client->rdma_events, RDMA_CM_EVENT_ROUTE_RESOLVED, NULL));
+  try3(expect_event(client->rdma_events, RDMA_CM_EVENT_ROUTE_RESOLVED));
 
   // prevent double-free using macros
   id2 = id;
   id = NULL;
   client->conn = try3_p(rdma_conn_create(id2, false), "failed to create RDMA connection");
 
-  // TODO: connect
+  struct rdma_conn_param memory_param = {};
   try3(rdma_connect(client->conn->id, NULL), "failed to connect");
-  try3(expect_event(client->rdma_events, RDMA_CM_EVENT_ESTABLISHED, NULL));
+  try3(expect_established(client->rdma_events, &memory_param));
+
+  struct memory_info* mem = (typeof(mem))memory_param.private_data;
+  if (mem) {
+    client->mem = *mem;
+  } else {
+    fprintf(stderr, "memory server memory info is null!\n");
+  }
+  printf("client mem rkey: %u\n", client->mem.rkey);
 
   return client;
 

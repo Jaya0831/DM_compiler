@@ -1,3 +1,4 @@
+#include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <stddef.h>
 #include <stdio.h>
