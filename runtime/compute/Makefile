@@ -1,6 +1,6 @@
 name := compute
 
-include_dir := ./include
+include_dir := include
 headers := $(wildcard src/*.h) $(wildcard $(include_dir)/*.h) $(wildcard ../common/*.h)
 
 sources := $(wildcard src/*.c)
@@ -25,7 +25,7 @@ clean:
 	find . -type f -name *.o -delete
 	rm -rf out
 
-$(objects) $(test_objects): %.o: %.c $(headers)
+$(objects) $(tests_objects): %.o: %.c $(headers)
 	$(CC) $(CFLAGS) -c -o $@ $< -I$(include_dir)
 
 out/lib$(name).so: $(objects)

@@ -14,7 +14,8 @@ int memory_context_free(struct memory_context* ctx) {
 struct memory_context* memory_context_create() {
   struct memory_context* ctx = try2_p(calloc(1, sizeof(*ctx)));
 
-  struct sockaddr_in addr = {.sin_family = AF_INET, .sin_port = htons(12345)};
+  // TODO: specify port in command line
+  struct sockaddr_in6 addr = {.sin6_family = AF_INET6, .sin6_port = htons(12345)};
   ctx->rdma = try3_p(rdma_server_create((struct sockaddr*)&addr), "failed to create RDMA server");
 
   // TODO

@@ -6,11 +6,7 @@
 #include "main.h"
 
 int rdma_server_free(struct rdma_server* server) {
-  int ret;
-  if (server->conn) {
-    ret = rdma_conn_free(server->conn);
-    if (ret < 0) perror("failed to free RDMA connection");
-  }
+  try(rdma_conn_free(server->conn), "failed to free RDMA connection");
   if (server->listen_id) rdma_destroy_id(server->listen_id);
   if (server->rdma_events) rdma_destroy_event_channel(server->rdma_events);
   return 0;
@@ -36,6 +32,8 @@ struct rdma_server* rdma_server_create(struct sockaddr* addr) {
 
   try3(rdma_accept(server->conn->id, NULL), "failed to accept");
   try3(expect_event(server->rdma_events, RDMA_CM_EVENT_ESTABLISHED, NULL));
+
+  return server;
 
 cleanup:
   rdma_server_free(server);

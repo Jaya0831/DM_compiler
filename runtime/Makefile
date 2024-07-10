@@ -1,7 +1,7 @@
 subprojects := compute memory
 clean_subprojects := $(addprefix clean-,$(subprojects))
 
-export CFLAGS += -Wall -O3 -g
+export CFLAGS += -Wall -std=gnu17 -O3 -g
 
 .PHONY: $(subprojects) clean $(clean_subprojects) .FORCE
 .FORCE:

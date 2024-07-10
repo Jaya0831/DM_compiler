@@ -11,14 +11,10 @@
 #define RESOLVE_TIMEOUT_MS 500
 
 int rdma_client_free(struct rdma_client* client) {
-  int ret = 0;
-  if (client->conn) {
-    ret = rdma_conn_free(client->conn);
-    if (ret < 0) perror("failed to free RDMA connection");
-  }
+  if (client->conn) try(rdma_conn_free(client->conn), "failed to free RDMA connection");
   if (client->rdma_events) rdma_destroy_event_channel(client->rdma_events);
   free(client);
-  return ret;
+  return 0;
 }
 
 struct rdma_client* rdma_client_connect(struct sockaddr* addr) {

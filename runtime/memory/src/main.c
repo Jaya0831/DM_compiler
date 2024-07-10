@@ -40,5 +40,8 @@ int main(int argc, char** argv) {
     try_p(memory_context_create(), "failed to initialize memory context");
   // TODO: main loop, poll cq, respond client
 
+  fprintf(stderr, "memory context initialized\n");
+
+  try(memory_context_free(ctx), "failed to free memory context");
   return 0;
 }

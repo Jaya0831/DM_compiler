@@ -17,33 +17,24 @@
 
 // Wait for a certain type of CM event, regarding others as error.
 static inline int expect_event(struct rdma_event_channel* events, enum rdma_cm_event_type type,
-                        struct rdma_cm_id** conn_id) {
+                               struct rdma_cm_id** conn_id) {
   struct rdma_cm_event* ev;
   try(rdma_get_cm_event(events, &ev), "cannot get CM event");
   if (ev->event != type) {
     fprintf(stderr, "expected %s, got %s\n", rdma_event_str(type), rdma_event_str(ev->event));
+    rdma_ack_cm_event(ev);
     return -1;
   }
-  // fprintf(stderr, "ayy!! %s\n", rdma_event_str(type));
+  fprintf(stderr, "ayy!! %s\n", rdma_event_str(type));
   if (conn_id) *conn_id = ev->id;
   rdma_ack_cm_event(ev);
   return 0;
 }
 
+// Current version seems to only need RDMA read and write, without control messages. Reserved for
+// future use.
 struct message {
-  enum message_kind {
-    MSG_REQ_CHUNK,    // compute request memory for new chunk
-    MSG_ALLOC_CHUNK,  // memory send chunk's memory region info to compute
-  } kind;
-  union {
-    struct {
-      uint16_t type_size, max_count;
-    } req_chunk;
-    struct {
-      uint64_t addr, len;
-      uint32_t rkey;
-    } alloc_chunk;
-  };
+  uint8_t _reserved[16];
 };
 
 struct rdma_connection {

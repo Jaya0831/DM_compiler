@@ -5,7 +5,7 @@
 struct compute_context;
 
 // Create compute context, and connect to memory server.
-struct compute_context* compute_context_connect();
+struct compute_context* compute_context_create();
 int compute_context_free(struct compute_context* ctx);
 
 #endif
