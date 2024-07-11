@@ -24,41 +24,38 @@ struct type {
   size_t size;
   // to handle Additional Parametric Types
   union {
-    // for nested TYPE_STRUCT
-    struct {
-      struct struct_repr* struct_repr;
-      size_t alignment;
-    };
-    // for TYPE_ARRAY
-    struct array_repr* array_repr;
+    // struct representation
+    // reference: https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
+    struct struct_repr {
+      const char* name;  // name of the struct (if applicable)
+      size_t alignment;  // struct alignment in bytes
+      size_t field_num;  // number of fields in the struct
+
+      // fields
+      struct struct_field {
+        const char* name;   // field name (if applicable)
+        struct type* type;  // field type
+        size_t offset;      // field offset within the struct
+      }* fields;
+    } struct_repr;
+
+    // array representation
+    // we do not consider array type in v1.0
+    struct array_repr {
+      struct type* type;
+      size_t len;
+    } array_repr;
+
     // for TYPE_POINTER
     struct type* pointee;
   };
 };
 
 // ...like this
-// extern const struct type* INT_TYPE;
-
-// struct representation
-// reference: https://mlir.llvm.org/docs/Dialects/LLVM/#structure-types
-struct struct_repr {
-  const char* name;           // name of the struct
-  struct struct_elem* elems;  // array of elements
-  size_t elem_num;            // number of elements in the struct
-};
-
-struct struct_elem {
-  const char* name;   // name of the element (if applicable)
-  struct type* type;  // type of the element
-  size_t offset;      // offset of the element within the struct
-};
-
-// array representation
-// we do not consider `LLVMArray` type in v1.0
-struct array_repr {
-  struct type* type;
-  size_t len;
-};
+extern struct type* INT_TYPE;
+extern struct type* FLOAT_TYPE;
+extern struct type* DOUBLE_TYPE;
+extern struct type* UINT64_T_TYPE;
 
 // returns type id (uint8_t)
 int register_struct(struct compute_context* ctx, struct struct_repr layout);
