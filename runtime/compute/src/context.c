@@ -12,6 +12,7 @@
 
 int compute_context_free(struct compute_context* ctx) {
   if (ctx->rdma) rdma_client_free(ctx->rdma);
+  free(ctx->types);
   free(ctx);
   return 0;
 }
@@ -29,6 +30,12 @@ struct compute_context* compute_context_create() {
   struct compute_context* ctx = try2_p(calloc(1, sizeof(*ctx)));
   ctx->rdma =
     try3_p(rdma_client_connect((struct sockaddr*)&addr), "failed to connect to memory server");
+
+  // 0 to 2 are reserved for arbitrary types
+  ctx->types_count = 3;
+  ctx->types = try3_p(calloc(3, sizeof(*ctx->types)));
+  ctx->type_chunk_refs = try3_p(calloc(3, sizeof(*ctx->type_chunk_refs)));
+  ctx->next_chunk = ctx->rdma->mem.addr;
 
   // printf("client mem addr: %lx; rkey: %u\n", ctx->rdma->mem.addr, ctx->rdma->mem.rkey);
 

@@ -12,6 +12,7 @@ extern "C" {
 // we care about struct and array (and pointer?)
 // other types could just be defined by global const...
 enum type_kind {
+  TYPE_ANY,  // for type id 0 to 2
   TYPE_STRUCT,
   TYPE_ARRAY,
   TYPE_POINTER,
