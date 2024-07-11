@@ -1,4 +1,5 @@
 #include <argp.h>
+#include <infiniband/verbs.h>
 #include <netinet/in.h>
 #include <rdma/rdma_cma.h>
 #include <stdint.h>
@@ -69,10 +70,41 @@ int main(int argc, char** argv) {
       if (events[i].data.fd == rdma_events_fd) {
         struct rdma_cm_event* rdma_event;
         try(rdma_get_cm_event(ctx->rdma->events, &rdma_event), "failed to get RDMA event");
-        printf("received new RDMA event %s", rdma_event_str(rdma_event->event));
+        switch (rdma_event->event) {
+          case RDMA_CM_EVENT_DISCONNECTED:
+            fprintf(stderr, "compute side disconnected, exiting\n");
+            return 0;
+          default:
+            fprintf(stderr, "received new RDMA event %s\n", rdma_event_str(rdma_event->event));
+            break;
+        }
         rdma_ack_cm_event(rdma_event);
+
       } else if (events[i].data.fd == ccfd) {
-        // TODO: completion
+        struct rdma_connection* c = ctx->rdma->conn;
+        struct ibv_wc wcs[MAX_POLL];
+        int polled = try(rdma_conn_poll_ev(c, wcs, MAX_POLL), "failed to poll");
+
+        bool errored = false;
+        for (int i = 0; i < polled; i++) {
+          if (wcs[i].status != IBV_WC_SUCCESS) {
+            fprintf(stderr, "recv completion queue received error: %s\n",
+                    ibv_wc_status_str(wcs[i].status));
+            errored = true;
+          }
+          if (!errored) {
+            // refill recv queue
+            // currently we only have 1 slot of recv buffer; will use wr_id to indicate which slot
+            // to refill.
+            try(rdma_post_recv(c->id, NULL, c->recv_buf, sizeof(*c->recv_buf), c->recv_mr),
+                "failed to RDMA recv");
+          }
+        }
+        if (errored) return -1;
+
+      } else {
+        fprintf(stderr, "unknown fd %d in epoll\n", events[i].data.fd);
+        return -1;
       }
     }
   }

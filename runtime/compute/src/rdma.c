@@ -46,7 +46,6 @@ struct rdma_client* rdma_client_connect(struct sockaddr* addr) {
   } else {
     fprintf(stderr, "memory server memory info is null!\n");
   }
-  printf("client mem rkey: %u\n", client->mem.rkey);
 
   return client;
 

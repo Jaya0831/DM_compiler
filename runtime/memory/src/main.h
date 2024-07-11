@@ -7,6 +7,8 @@
 
 #include "../../common/rdma.h"
 
+#define MAX_POLL 16
+
 /* rdma.c */
 
 struct rdma_server {

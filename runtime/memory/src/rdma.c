@@ -18,7 +18,7 @@ int rdma_server_free(struct rdma_server* server) {
 // TODO: pass MR information to compute side
 struct rdma_server* rdma_server_create(struct sockaddr* addr, void* mem_pool, size_t mem_pool_size,
                                        size_t page_size) {
-  struct rdma_server* server = try2_p(calloc(1, sizeof(*server)), "1");
+  struct rdma_server* server = try2_p(calloc(1, sizeof(*server)));
   server->events = try3_p(rdma_create_event_channel(), "failed to create RDMA event channel");
   try3(rdma_create_id(server->events, &server->listen_id, NULL, RDMA_PS_TCP),
        "failed to create listen ID");
@@ -37,7 +37,8 @@ struct rdma_server* rdma_server_create(struct sockaddr* addr, void* mem_pool, si
   server->conn = try3_p(rdma_conn_create(conn_id, true), "failed to create connection");
 
   server->mem_pool_mr =
-    try3_p(ibv_reg_mr(server->conn->pd, mem_pool, mem_pool_size, IBV_ACCESS_LOCAL_WRITE),
+    try3_p(ibv_reg_mr(server->conn->pd, mem_pool, mem_pool_size,
+                      IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE),
            "cannot register memory region");
 
   // Accept parameters that compute side had proposed, plus memory-side handshake data (MR info,

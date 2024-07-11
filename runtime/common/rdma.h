@@ -3,7 +3,6 @@
 #ifndef _COMMON_RDMA_H_
 #define _COMMON_RDMA_H_
 
-#include <assert.h>
 #include <errno.h>
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
@@ -53,11 +52,14 @@ struct message {
   uint8_t _reserved[16];
 };
 
+//
 struct rdma_connection {
-  struct rdma_cm_id* id;                // RDMA communication manager ID, like socket
-  struct ibv_pd* pd;                    // protection domain
-  struct ibv_comp_channel* cc;          // completion channel, for notification
-  struct ibv_cq* cq;                    // completion queue
+  struct rdma_cm_id* id;  // RDMA communication manager ID, like socket
+  struct ibv_pd* pd;      // protection domain
+
+  struct ibv_comp_channel* cc;       // receive completion channel, for event notification
+  struct ibv_cq *send_cq, *recv_cq;  // completion queues
+
   struct message *send_buf, *recv_buf;  // message buffers
   struct ibv_mr *send_mr, *recv_mr;     // message buffers' registered memory regions
 };
@@ -73,7 +75,8 @@ static inline int rdma_conn_free(struct rdma_connection* conn) {
   if (conn->send_buf) free(conn->send_buf);
   if (conn->recv_buf) free(conn->recv_buf);
 
-  if (conn->cq) ibv_destroy_cq(conn->cq);
+  if (conn->send_cq) ibv_destroy_cq(conn->send_cq);
+  if (conn->recv_cq) ibv_destroy_cq(conn->recv_cq);
   if (conn->cc) ibv_destroy_comp_channel(conn->cc);
   if (conn->pd) ibv_dealloc_pd(conn->pd);
 
@@ -88,12 +91,16 @@ static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, bo
   c->id = id;
   c->pd = try3_p(ibv_alloc_pd(c->id->verbs), "cannot allocate protection domain");
 
+  c->send_cq =
+    try3_p(ibv_create_cq(id->verbs, 16, NULL, NULL, 0), "cannot create completion queue");
   if (use_event) {
     c->cc = try3_p(ibv_create_comp_channel(id->verbs), "cannot create completion channel");
-    c->cq = try3_p(ibv_create_cq(id->verbs, 16, NULL, c->cc, 0), "cannot create completion queue");
-    try3(ibv_req_notify_cq(c->cq, false), "cannot request for completion queue notification");
+    c->recv_cq =
+      try3_p(ibv_create_cq(id->verbs, 16, NULL, c->cc, 0), "cannot create completion queue");
+    try3(ibv_req_notify_cq(c->recv_cq, false), "cannot arm completion channel");
   } else {
-    c->cq = try3_p(ibv_create_cq(id->verbs, 16, NULL, NULL, 0), "cannot create completion queue");
+    c->recv_cq =
+      try3_p(ibv_create_cq(id->verbs, 16, NULL, NULL, 0), "cannot create completion queue");
   }
 
   c->send_buf = try3_p(calloc(1, sizeof(*c->send_buf)));
@@ -104,8 +111,8 @@ static inline struct rdma_connection* rdma_conn_create(struct rdma_cm_id* id, bo
   // Create queue pair inside CM ID
   struct ibv_qp_init_attr attr = {
     .qp_type = IBV_QPT_RC,
-    .send_cq = c->cq,
-    .recv_cq = c->cq,
+    .send_cq = c->send_cq,
+    .recv_cq = c->recv_cq,
     .cap = {.max_send_wr = 32, .max_recv_wr = 4, .max_send_sge = 1, .max_recv_sge = 1},
   };
   try3(rdma_create_qp(id, c->pd, &attr), "cannot create queue pair");
@@ -121,83 +128,30 @@ cleanup:
   return NULL;
 }
 
-static inline int _rdma_conn_poll_evented(struct rdma_connection* conn, struct ibv_wc* wc_list,
-                                          size_t wc_len, unsigned int ack_count) {
+// Poll as many work completions as available in one event.
+static inline int rdma_conn_poll_ev(struct rdma_connection* conn, struct ibv_wc* wcs, size_t wcn) {
   struct ibv_cq* cq_ptr;
   void* cq_ctx_ptr;
   try(ibv_get_cq_event(conn->cc, &cq_ptr, &cq_ctx_ptr), "failed to get completion event");
-  assert(cq_ptr == conn->cq);
+  // assert(cq_ptr == conn->recv_cq);
 
-  int polled_len = 0;
+  int polled = 0;
   do {
-    int count = try(ibv_poll_cq(conn->cq, wc_len - polled_len, wc_list + polled_len),
-                    "failed to poll completion queue");
+    int count =
+      try(ibv_poll_cq(cq_ptr, wcn - polled, wcs + polled), "failed to poll completion queue");
     if (count == 0) {
-      if (polled_len == 0) {
+      if (polled == 0) {
         fprintf(stderr, "completion channel reports false positive\n");
         return -(errno = EBADMSG);
       }
-      // nothing inside queue right now, register and wait for next event
-      // TODO: busy poll for a certain number of times
-      try(ibv_req_notify_cq(conn->cq, false), "cannot request for completion queue notification");
-      return _rdma_conn_poll_evented(conn, wc_list + polled_len, wc_len - polled_len,
-                                     ack_count + 1);
+      break;
     }
-    polled_len += count;
-  } while (polled_len < wc_len);
+    polled += count;
+  } while (polled < wcn);
 
-  ibv_ack_cq_events(conn->cq, ack_count);  // ACKs batched here
-  try(ibv_req_notify_cq(conn->cq, false), "cannot request for completion queue notification");
-  return 0;
-}
-
-static inline int rdma_conn_poll(struct rdma_connection* conn, struct ibv_wc* wc_list,
-                                 size_t wc_len) {
-  if (conn->cc) {
-    return _rdma_conn_poll_evented(conn, wc_list, wc_len, 1);
-  } else {
-    int polled_len = 0;
-    do {
-      int count = try(ibv_poll_cq(conn->cq, wc_len - polled_len, wc_list + polled_len),
-                      "failed to poll completion queue");
-      polled_len += count;
-    } while (polled_len < wc_len);
-  }
-  return 0;
-}
-
-// Send data currently in send buffer.
-///
-// Now that we have only one buffer, we have to enable `poll_now`; the argument currently has to be
-// true.
-static inline int rdma_conn_send(struct rdma_connection* conn, bool poll_now) {
-  try(rdma_post_send(conn->id, NULL, conn->send_buf, sizeof(*conn->send_buf), conn->send_mr,
-                     IBV_SEND_SIGNALED),
-      "failed to RDMA send");
-  if (poll_now) {
-    struct ibv_wc wc;
-    try(rdma_conn_poll(conn, &wc, 1), "failed to poll");
-    if (wc.status != IBV_WC_SUCCESS) {
-      fprintf(stderr, "RDMA send failed: %s\n", ibv_wc_status_str(wc.status));
-      return -(errno = EBADMSG);
-    }
-  }
-  return 0;
-}
-
-// For `poll_now`, see above.
-static inline int rdma_conn_recv(struct rdma_connection* conn, bool poll_now) {
-  if (poll_now) {
-    struct ibv_wc wc;
-    try(rdma_conn_poll(conn, &wc, 1), "failed to poll");
-    if (wc.status != IBV_WC_SUCCESS) {
-      fprintf(stderr, "RDMA recv failed: %s\n", ibv_wc_status_str(wc.status));
-      return -(errno = EBADMSG);
-    }
-  }
-  try(rdma_post_recv(conn->id, NULL, conn->recv_buf, sizeof(*conn->recv_buf), conn->recv_mr),
-      "failed to RDMA recv");
-  return 0;
+  ibv_ack_cq_events(cq_ptr, 1);  // potential optimization by batching ACKs
+  try(ibv_req_notify_cq(cq_ptr, false), "cannot rearm completion channel");
+  return polled;
 }
 
 #endif
