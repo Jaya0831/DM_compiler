@@ -8,7 +8,7 @@
 global_addr_t disagg_alloc(struct compute_context* ctx, uint8_t type_id, size_t size, int count) {
   global_addr_t gaddr = {.type_id = type_id};
 
-  size_t real_size = type_id < 3 ? size : ctx->types[type_id].size;
+  size_t real_size = type_id < 3 ? size : ctx->types[type_id]->size;
   uint64_t page_size = ctx->rdma->mem.page_size;
   if (real_size > page_size) {
     // Cross-page allocation not supported for now

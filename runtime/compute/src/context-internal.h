@@ -31,7 +31,7 @@ struct compute_context {
   struct rdma_client* rdma;  // RDMA context, containing remote memory info
 
   uint8_t types_count;  // Total number of types (including reserved)
-  struct type* types;   // Type information
+  struct type** types;  // Type information
   struct chunk_ref_list*
     type_chunk_refs;    // Allocated chunks' address reference for types,
                         // probably should be linked list for future GC compatibility

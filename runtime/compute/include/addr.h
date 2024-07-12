@@ -9,17 +9,17 @@ extern "C" {
 
 typedef union {
   struct {
-    uint8_t type_id : 8; // start from 3 (reserve type_id 0 to 2)
+    uint8_t type_id : 8;  // start from 3 (reserve type_id 0 to 2)
     uint64_t offset : 56;
   };
   uint64_t val;
 } global_addr_t;
 
 // data dependency
-typedef global_addr_t (*const data_dep_t)(global_addr_t gaddr);
+typedef global_addr_t (*const data_dep_t)(void* gaddr);
 
 struct addr_dep {
-  uint8_t type1, type2;
+  uint8_t from, to;
   data_dep_t dep;
 };
 

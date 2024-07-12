@@ -33,8 +33,8 @@ struct compute_context* compute_context_create() {
 
   // 0 to 2 are reserved for arbitrary types
   ctx->types_count = 3;
-  ctx->types = try3_p(calloc(3, sizeof(*ctx->types)));
-  ctx->type_chunk_refs = try3_p(calloc(3, sizeof(*ctx->type_chunk_refs)));
+  ctx->types = try3_p(calloc(ctx->types_count, sizeof(void*)));
+  ctx->type_chunk_refs = try3_p(calloc(ctx->types_count, sizeof(*ctx->type_chunk_refs)));
   ctx->next_chunk = ctx->rdma->mem.addr;
 
   // printf("client mem addr: %lx; rkey: %u\n", ctx->rdma->mem.addr, ctx->rdma->mem.rkey);

@@ -52,14 +52,11 @@ struct type {
 };
 
 // ...like this
-extern struct type* INT_TYPE;
-extern struct type* FLOAT_TYPE;
-extern struct type* DOUBLE_TYPE;
-extern struct type* UINT64_T_TYPE;
+extern struct type INT_TYPE, FLOAT_TYPE, DOUBLE_TYPE, UINT64_T_TYPE;
 
 // returns type id (uint8_t)
-int register_struct(struct compute_context* ctx, struct struct_repr layout);
-int register_array(struct compute_context* ctx, struct array_repr layout);
+// `type` must live longer than `ctx` since `ctx` only stores reference to it
+int register_type(struct compute_context* ctx, struct type* type);
 
 #ifdef __cplusplus
 }
