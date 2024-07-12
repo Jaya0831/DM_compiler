@@ -57,3 +57,5 @@ out/
 
 .DS_Store
 .vscode/
+
+/build/

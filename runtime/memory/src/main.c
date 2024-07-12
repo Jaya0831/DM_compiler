@@ -7,7 +7,7 @@
 #include <sys/epoll.h>
 #include <sys/mman.h>
 
-#include "../../common/parse.h"
+#include "common/parse.h"
 #include "main.h"
 
 static const char args_doc[] = "ADDRESS";

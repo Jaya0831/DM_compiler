@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../common/parse.h"
+#include "common/parse.h"
 #include "context-internal.h"
 #include "context.h"
 #include "rdma.h"

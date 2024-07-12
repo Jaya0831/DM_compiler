@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "../../common/try.h"
+#include "common/try.h"
 #include "context.h"
 #include "type.h"
 

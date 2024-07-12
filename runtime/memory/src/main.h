@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <sys/socket.h>
 
-#include "../../common/rdma.h"
+#include "common/rdma.h"
 
 #define MAX_POLL 16
 

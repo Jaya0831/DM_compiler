@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../common/handshake.h"
-#include "../../common/try.h"
+#include "common/handshake.h"
+#include "common/try.h"
 #include "rdma.h"
 
 #define RESOLVE_TIMEOUT_MS 500

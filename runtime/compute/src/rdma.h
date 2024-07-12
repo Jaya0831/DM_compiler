@@ -3,8 +3,8 @@
 
 #include <rdma/rdma_cma.h>
 
-#include "../../common/rdma.h"
-#include "../../common/handshake.h"
+#include "common/rdma.h"
+#include "common/handshake.h"
 
 struct rdma_client {
   struct rdma_event_channel* rdma_events;

@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../common/handshake.h"
-#include "../../common/rdma.h"
+#include "common/handshake.h"
+#include "common/rdma.h"
 #include "main.h"
 
 int rdma_server_free(struct rdma_server* server) {

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 
-#include "../../common/try.h"
+#include "common/try.h"
 #include "main.h"
 
 int memory_context_free(struct memory_context* ctx) {
