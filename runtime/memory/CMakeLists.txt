@@ -6,6 +6,7 @@ add_executable(dm_compiler_rt_memory
 )
 target_include_directories(dm_compiler_rt_memory
     PRIVATE
+        src
         ${IBVERBS_INCLUDE_DIRS}
 )
 target_link_libraries(dm_compiler_rt_memory RDMA::RDMAcm ${IBVERBS_LIBRARIES})
