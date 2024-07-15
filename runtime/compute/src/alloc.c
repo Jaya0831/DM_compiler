@@ -1,8 +1,11 @@
+#include <errno.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "addr.h"
 #include "alloc.h"
+#include "common/handshake.h"
 #include "context-internal.h"
 
 global_addr_t disagg_alloc(struct compute_context* ctx, uint8_t type_id, size_t size, int count) {
@@ -16,26 +19,30 @@ global_addr_t disagg_alloc(struct compute_context* ctx, uint8_t type_id, size_t 
     return (typeof(gaddr)){.val = 0};
   }
 
+  struct chunk_ref_list* chunks = &ctx->type_chunk_refs[type_id];
+  pthread_rwlock_rdlock(&chunks->lock);
+
   // find chunk available for allocation; this currently has to be the last chunk in
   // `ctx->type_chunk_refs[type_id]`, or all chunks are filled.
-  if (!ctx->type_chunk_refs[type_id].head) {
-    chunk_ref_list_insert(&ctx->type_chunk_refs[type_id], ctx->next_chunk);
-    ctx->next_chunk += page_size;
-    // TODO: check if all memory pages have been allocated
-  } else {
-    uint64_t chunk_next_addr = ctx->type_chunk_refs[type_id].tail->next_addr;
-    if (chunk_next_addr + real_size > ((chunk_next_addr & (page_size - 1)) + page_size)) {
-      chunk_ref_list_insert(&ctx->type_chunk_refs[type_id], ctx->next_chunk);
-      ctx->next_chunk += page_size;
-      // TODO: check if all memory pages have been allocated
+  if (!chunks->head ||
+      (chunks->tail && (chunks->tail->next_addr + real_size >
+                        ((chunks->tail->next_addr & (page_size - 1)) + page_size)))) {
+    pthread_rwlock_unlock(&chunks->lock);
+    uint64_t addr = atomic_fetch_add(&ctx->next_chunk, page_size);
+    chunk_ref_list_insert(chunks, addr);
+    if (addr >= mem_upper_bound(ctx->rdma->mem)) {
+      // remote memory pool is drained
+      errno = ENOMEM;
+      return GADDR_NULL;
     }
+    pthread_rwlock_rdlock(&chunks->lock);
   }
 
   // Now, `tail` contains the available chunk. Shift `next_addr` to allocate.
-  uint64_t* next_addr_ptr = &ctx->type_chunk_refs[type_id].tail->next_addr;
-  gaddr.offset = *next_addr_ptr;
-  *next_addr_ptr += real_size;
+  // TODO: atomic
+  gaddr.offset = atomic_fetch_add(&chunks->tail->next_addr, real_size);
 
+  pthread_rwlock_unlock(&chunks->lock);
   return gaddr;
 }
 

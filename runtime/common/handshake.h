@@ -15,4 +15,9 @@ struct memory_info {
   uint32_t rkey, page_count;
 };
 
+// Remote memory pool range [info.addr, mem_upper_bound(info))
+static inline uint64_t mem_upper_bound(struct memory_info info) {
+  return info.addr + info.page_size * info.page_count;
+}
+
 #endif

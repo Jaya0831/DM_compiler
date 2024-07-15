@@ -11,7 +11,7 @@ target_include_directories(dm_compiler_rt_compute
     PRIVATE
         src
 )
-target_link_libraries(dm_compiler_rt_compute RDMA::RDMAcm ${IBVERBS_LIBRARIES})
+target_link_libraries(dm_compiler_rt_compute RDMA::RDMAcm Threads::Threads ${IBVERBS_LIBRARIES})
 
 add_executable(dm_compiler_rt_compute_tests
     tests/main.c

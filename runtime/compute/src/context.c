@@ -1,5 +1,6 @@
 #include <infiniband/verbs.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <rdma/rdma_verbs.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -35,6 +36,8 @@ struct compute_context* compute_context_create() {
   ctx->types_count = 3;
   ctx->types = try3_p(calloc(ctx->types_count, sizeof(void*)));
   ctx->type_chunk_refs = try3_p(calloc(ctx->types_count, sizeof(*ctx->type_chunk_refs)));
+  for (int i = 0; i < ctx->types_count; i++)
+    pthread_rwlock_init(&ctx->type_chunk_refs[i].lock, NULL);
   ctx->next_chunk = ctx->rdma->mem.addr;
 
   // printf("client mem addr: %lx; rkey: %u\n", ctx->rdma->mem.addr, ctx->rdma->mem.rkey);

@@ -9,4 +9,4 @@ target_include_directories(dm_compiler_rt_memory
         src
         ${IBVERBS_INCLUDE_DIRS}
 )
-target_link_libraries(dm_compiler_rt_memory RDMA::RDMAcm ${IBVERBS_LIBRARIES})
+target_link_libraries(dm_compiler_rt_memory RDMA::RDMAcm Threads::Threads ${IBVERBS_LIBRARIES})

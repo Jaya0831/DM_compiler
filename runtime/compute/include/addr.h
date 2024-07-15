@@ -15,7 +15,10 @@ typedef union {
   uint64_t val;
 } global_addr_t;
 
+#define GADDR_NULL ((global_addr_t){.val = 0})
+
 // data dependency
+// TODO: register?
 typedef global_addr_t (*const data_dep_t)(void* gaddr);
 
 struct addr_dep {
