@@ -1,6 +1,7 @@
 add_library(dm_compiler_rt_compute
     src/alloc.c
     src/context.c
+    src/local_cache.c
     src/rdma.c
     src/type.c
 )
@@ -11,7 +12,12 @@ target_include_directories(dm_compiler_rt_compute
     PRIVATE
         src
 )
-target_link_libraries(dm_compiler_rt_compute RDMA::RDMAcm Threads::Threads ${IBVERBS_LIBRARIES})
+target_link_libraries(dm_compiler_rt_compute
+    RDMA::RDMAcm
+    Threads::Threads
+    ${IBVERBS_LIBRARIES}
+    hashmap_c
+)
 
 add_executable(dm_compiler_rt_compute_tests
     tests/main.c
