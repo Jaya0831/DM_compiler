@@ -1,7 +1,7 @@
 add_library(dm_compiler_rt_compute
     src/alloc.c
     src/context.c
-    src/local_cache.c
+    src/cache.c
     src/rdma.c
     src/type.c
 )

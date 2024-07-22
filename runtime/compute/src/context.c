@@ -9,11 +9,14 @@
 #include "common/parse.h"
 #include "context-internal.h"
 #include "context.h"
+#include "hashmap.h"
 #include "rdma.h"
 
 int compute_context_free(struct compute_context* ctx) {
   if (ctx->rdma) rdma_client_free(ctx->rdma);
   free(ctx->types);
+  free(ctx->type_chunk_refs);
+  hashmap_free(ctx->addr_trans_table);
   free(ctx);
   return 0;
 }
@@ -39,6 +42,12 @@ struct compute_context* compute_context_create() {
   for (int i = 0; i < ctx->types_count; i++)
     pthread_rwlock_init(&ctx->type_chunk_refs[i].lock, NULL);
   ctx->next_chunk = ctx->rdma->mem.addr;
+
+  // TODO: cache blocks for oblivious types
+  ctx->caches = try3_p(calloc(ctx->types_count, sizeof(*ctx->caches)));
+  ctx->addr_trans_table = addr_trans_table_new();
+
+  // ctx->addr_trans_table = hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1, uint64_t (*hash)(const void *, uint64_t, uint64_t), int (*compare)(const void *, const void *, void *), void (*elfree)(void *), void *udata)
 
   // printf("client mem addr: %lx; rkey: %u\n", ctx->rdma->mem.addr, ctx->rdma->mem.rkey);
 
