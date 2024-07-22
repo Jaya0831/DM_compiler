@@ -45,9 +45,8 @@ struct cache_block {
   size_t slot_count;
   void* slots;
   struct cache_slot_metadata {
-    global_addr_t gaddr;  // tag, GADDR_NULL if invalid
-                          // since one object occupies one slot, tag = gaddr
-    _Atomic bool dirty;
+    uint64_t tag;         // gaddr.offset = tag + slot_off
+    _Atomic bool dirty;   // Dirty bit
     _Atomic uint32_t rc;  // Reference count
     // TODO: merge atomic types into one big atomic uint64_t
   }* metadata;
