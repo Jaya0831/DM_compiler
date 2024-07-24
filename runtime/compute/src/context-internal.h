@@ -70,19 +70,20 @@ struct compute_context {
 
   // Caching
   struct cache_block* caches;
-  struct hashmap* addr_trans_table;
+  struct hashmap* addr_trans_table;  // TODO: make it concurrent
+                                     // probably create a C binding for Rust's dashmap?
 
   // TODO: addr dep, ...
 };
 
 struct addr_trans_entry {
-  global_addr_t gaddr;
+  global_addr_t type_id_tag;
   int slot_index;
 };
 
 static inline uint64_t addr_trans_entry_hash(const void* item, uint64_t seed0, uint64_t seed1) {
   const struct addr_trans_entry* entry = (typeof(entry))item;
-  return entry->gaddr.val;
+  return entry->type_id_tag.val;
 }
 
 static inline struct hashmap* addr_trans_table_new() {

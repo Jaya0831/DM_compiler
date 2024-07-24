@@ -18,6 +18,7 @@ struct cache_token {
 struct cache_token cache_request(struct compute_context* ctx, global_addr_t gaddr);
 void* cache_access(struct compute_context* ctx, struct cache_token token);
 void* cache_access_mut(struct compute_context* ctx, struct cache_token token);
+void cache_token_free(struct compute_context* ctx, struct cache_token token);
 
 #ifdef __cplusplus
 }
