@@ -6,17 +6,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "cache-internal.h"
 #include "common/parse.h"
 #include "context-internal.h"
 #include "context.h"
 #include "hashmap.h"
 #include "rdma.h"
 
+// Public APIs
+
 int compute_context_free(struct compute_context* ctx) {
   if (ctx->rdma) rdma_client_free(ctx->rdma);
+
   free(ctx->types);
   free(ctx->type_chunk_refs);
+
+  for (int i = 0; i < ctx->types_count; i++) cache_block_free(&ctx->caches[i]);
+  free(ctx->caches);
   hashmap_free(ctx->addr_trans_table);
+
   free(ctx);
   return 0;
 }
@@ -44,10 +52,8 @@ struct compute_context* compute_context_create() {
   ctx->next_chunk = ctx->rdma->mem.addr;
 
   // TODO: cache blocks for oblivious types
-  ctx->caches = try3_p(calloc(ctx->types_count, sizeof(*ctx->caches)));
+  ctx->caches = try3_p(calloc(ctx->types_count, sizeof(struct cache_block)));
   ctx->addr_trans_table = addr_trans_table_new();
-
-  // ctx->addr_trans_table = hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1, uint64_t (*hash)(const void *, uint64_t, uint64_t), int (*compare)(const void *, const void *, void *), void (*elfree)(void *), void *udata)
 
   // printf("client mem addr: %lx; rkey: %u\n", ctx->rdma->mem.addr, ctx->rdma->mem.rkey);
 

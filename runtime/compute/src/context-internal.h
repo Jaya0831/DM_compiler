@@ -3,6 +3,7 @@
 
 #include <errno.h>
 #include <hashmap.h>
+#include <infiniband/verbs.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <time.h>
@@ -34,24 +35,7 @@ static inline int chunk_ref_list_insert(struct chunk_ref_list* list, uint64_t ne
   return 0;
 }
 
-struct cache_free_list {
-  // TODO: queue or B-tree
-};
-
-void cache_free_list_push(int slot);
-int cache_free_list_pop();
-
-struct cache_block {
-  size_t slot_count;
-  void* slots;
-  struct cache_slot_metadata {
-    uint64_t tag;         // gaddr.offset = tag + slot_off
-    _Atomic bool dirty;   // Dirty bit
-    _Atomic uint32_t rc;  // Reference count
-    // TODO: merge atomic types into one big atomic uint64_t
-  }* metadata;
-  struct cache_free_list* free_list;
-};
+// TODO: chunk_ref_list_free
 
 // Internal representation of compute context
 struct compute_context {
