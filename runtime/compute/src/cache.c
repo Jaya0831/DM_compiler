@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <infiniband/verbs.h>
 #include <stdatomic.h>
+#include <stdint.h>
 
 #include "addr.h"
 #include "cache-internal.h"
@@ -33,31 +34,99 @@ cleanup:
   return -errno;
 }
 
-// Public APIs
-
-struct cache_token cache_request(struct compute_context* ctx, global_addr_t gaddr) {
+// - `addr_trans_table` contains `gaddr`:
+//   - invalid: in eviction, cache miss
+//   - valid: ours, cache hit
+// - `addr_trans_table` does not contain `gaddr`: cache miss
+static inline struct cache_token cache_try_request(struct compute_context* ctx,
+                                                   global_addr_t gaddr) {
   uint64_t tag = extract_tag(ctx, gaddr);
+  struct cache_block* cache = &ctx->caches[gaddr.type_id];
 
-  global_addr_t type_id_token = {.type_id = gaddr.type_id, .offset = tag};
+  global_addr_t type_id_tag = {.type_id = gaddr.type_id, .offset = tag};
   const struct addr_trans_entry* entry =
-    hashmap_get(ctx->addr_trans_table, &(struct addr_trans_entry){type_id_token});
+    hashmap_get(ctx->addr_trans_table, &(struct addr_trans_entry){type_id_tag});
   if (entry) {
     struct cache_token token = {
       .tag = tag,
       .type_id = gaddr.type_id,
       .slot_index = entry->slot_index,
+      .slot_off = gaddr.offset - tag,
     };
 
-    struct cache_slot_metadata* meta = &ctx->caches[token.type_id].metadata[token.slot_index];
-    if (meta->tag == token.tag) {
+    struct cache_slot_metadata* meta = &cache->metadata[token.slot_index];
+    if ((atomic_load(&meta->valid_rc) & (1 << 31)) && meta->tag == tag) {
       // This cache slot is still ours
-      atomic_fetch_add(&meta->rc, 1);
-      token.slot_off = gaddr.offset - token.tag;
+      // TODO: if I/O bit set, spin until it is unset
+      atomic_fetch_add(&meta->valid_rc, 1);
       return token;
     }
   }
+  return CACHE_TOKEN_NULL;
+}
 
+// Public APIs
+
+struct cache_token cache_request(struct compute_context* ctx, global_addr_t gaddr) {
+  struct cache_token token = cache_try_request(ctx, gaddr);
+  if (!cache_token_is_null(token)) return token;
+
+  struct cache_block* cache = &ctx->caches[gaddr.type_id];
+  int slot = cache_free_list_pop(cache->free_list);
+  if (slot < 0) {
+    // TODO: batch evict, evict delegation
+    // TODO: initialize random seed & random with exclusion
+    int evict_idx = rand() % cache->slot_count;
+    struct cache_slot_metadata* meta = &cache->metadata[evict_idx];
+    // if valid and RC=0, mark it as invalid and evict
+    uint32_t valid_rc = 1 << 31;
+    if (atomic_compare_exchange_strong(&meta->valid_rc, &valid_rc, 0)) {
+      hashmap_delete(
+        ctx->addr_trans_table,
+        &(struct addr_trans_entry){.type_id_tag = {.type_id = gaddr.type_id, .offset = meta->tag}});
+
+      if (atomic_exchange(&meta->dirty, false)) {
+        // TODO: get the global address and write back
+      }
+      meta->tag = 0;
+      slot = evict_idx;
+    } else {
+      // TODO: try again
+    }
+  }
+
+  // TODO: concurrent hash map implementation should have "insert if vacant" to ensure atomicity;
+  // use a mockup for now
+  // TODO: set I/O bit before hash map insertion
+  token = cache_try_request(ctx, gaddr);
+  if (cache_token_is_null(token)) {
+    uint64_t tag = extract_tag(ctx, gaddr);
+    struct addr_trans_entry entry = {
+      .type_id_tag = {.type_id = gaddr.type_id, .offset = tag},
+      .slot_index = slot,
+    };
+    hashmap_set(ctx->addr_trans_table, &entry);
+
+    // TODO: mark the slot as valid and RC=1, insert to `addr_trans_table` and return token
+    struct cache_slot_metadata* meta = &cache->metadata[slot];
+    meta->tag = tag;
+    meta->dirty = false;
+
+    // TODO: RDMA fetch
+
+    atomic_store(&meta->valid_rc, (1 << 31) + 1);
+
+  } else {
+    cache_free_list_push(cache->free_list, slot);
+  }
+
+  return token;
+
+  // -----------
   // TODO: remote_fetch with possible eviction
+  // 1. check free list to see if there's free slots available; if not, evict to make one
+  // 2. fill the acquired free slot with remote fetch
+  // 3. add the entry to addr_trans_table
 }
 
 void* cache_access(struct compute_context* ctx, struct cache_token token) {
@@ -75,5 +144,5 @@ void* cache_access_mut(struct compute_context* ctx, struct cache_token token) {
 void cache_token_free(struct compute_context* ctx, struct cache_token token) {
   struct cache_slot_metadata* meta = &ctx->caches[token.type_id].metadata[token.slot_index];
   assert(meta->tag == token.tag);
-  atomic_fetch_add(&meta->rc, -1);
+  atomic_fetch_add(&meta->valid_rc, -1);
 }

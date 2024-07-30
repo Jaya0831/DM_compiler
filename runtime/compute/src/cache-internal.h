@@ -9,6 +9,7 @@ struct cache_free_list {
 
 struct cache_free_list* cache_free_list_create();
 void cache_free_list_push(struct cache_free_list* self, int slot);
+// Returns free slot index, or negative value if no free slot is currently available.
 int cache_free_list_pop(struct cache_free_list* self);
 void cache_free_list_free(struct cache_free_list* self);
 
@@ -17,10 +18,10 @@ struct cache_block {
   void* slots;
   struct ibv_mr* mr;
   struct cache_slot_metadata {
-    uint64_t tag;         // gaddr.offset = tag + slot_off
-    _Atomic bool dirty;   // Dirty bit
-    _Atomic uint32_t rc;  // Reference count
-    // TODO: merge atomic types into one big atomic uint64_t
+    uint64_t tag;               // gaddr.offset = tag + slot_off
+    _Atomic bool dirty;         // Dirty bit
+    _Atomic uint32_t valid_rc;  // [valid:1|rc:31]
+                                // TODO: [valid:1|io:1|rc:30]
   }* metadata;
   struct cache_free_list* free_list;
 };
