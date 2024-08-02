@@ -16,7 +16,7 @@ struct chunk_ref_list {
   pthread_rwlock_t lock;  // per-type chunk refs lock, used when adding new chunk
   struct chunk_ref {
     struct chunk_ref* next;
-    _Atomic uint64_t next_addr;  // chunk_start_addr = next_addr & (chunk_size - 1);
+    uint64_t next_addr;  // chunk_start_addr = next_addr & (chunk_size - 1);
   } *head, *tail;
 };
 
@@ -46,11 +46,9 @@ struct compute_context {
   struct type** types;  // Type information
 
   // Allocation
-  struct chunk_ref_list*
-    type_chunk_refs;            // Allocated chunks' address reference for types,
-                                // probably should be linked list for future GC compatibility
-  _Atomic uint64_t next_chunk;  // Next allocated chunk start address;
-                                // only for naive chunk allocation algorithm
+  struct chunk_ref_list* type_chunk_refs;  // Allocated chunks' address reference for types,
+  _Atomic uint64_t next_chunk;             // Next allocated chunk start address;
+                                           // only for naive chunk allocation algorithm
 
   // Caching
   struct cache_block* caches;

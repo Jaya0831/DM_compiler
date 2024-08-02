@@ -18,10 +18,9 @@ struct cache_block {
   void* slots;
   struct ibv_mr* mr;
   struct cache_slot_metadata {
-    uint64_t tag;               // gaddr.offset = tag + slot_off
-    _Atomic bool dirty;         // Dirty bit
-    _Atomic uint32_t valid_rc;  // [valid:1|rc:31]
-                                // TODO: [valid:1|io:1|rc:30]
+    uint64_t tag;                  // gaddr.offset = tag + slot_off
+    _Atomic bool dirty;            // Dirty bit
+    _Atomic uint32_t valid_io_rc;  // [valid:1|io:1|rc:30]
   }* metadata;
   struct cache_free_list* free_list;
 };
