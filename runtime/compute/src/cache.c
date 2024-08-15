@@ -3,6 +3,7 @@
 #include <rdma/rdma_verbs.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "addr.h"
 #include "cache-internal.h"
@@ -12,6 +13,60 @@
 #include "hashmap.h"
 
 static const uint32_t FLAG_VALID = 1 << 31, FLAG_IO = 1 << 30;
+
+struct cache_free_list* cache_free_list_new(int slot_begin, int slot_back) {
+  struct cache_free_list* list = malloc(sizeof(struct cache_free_list));
+
+  struct cache_free_list_node* node = malloc(sizeof(struct cache_free_list_node));
+  node->begin = slot_begin;
+  node->back = slot_back;
+  node->next = NULL;
+
+  list->head = list->tail = node;
+
+  return list;
+}
+
+void cache_free_list_push(struct cache_free_list* self, int slot) {
+  if (self->tail && self->tail->back == slot - 1) {
+    self->tail->back = slot;
+    return;
+  }
+
+  struct cache_free_list_node* new_tail = malloc(sizeof(struct cache_free_list_node));
+  new_tail->begin = new_tail->back = slot;
+  new_tail->next = NULL;
+
+  self->tail->next = new_tail;
+  self->tail = new_tail;
+}
+
+int cache_free_list_pop(struct cache_free_list* self) {
+  if (!self->head) return -1;
+
+  if (self->head->begin != self->head->back) return self->head->begin++;
+
+  struct cache_free_list_node* old_head = self->head;
+  int slot = old_head->begin;
+
+  self->head = self->head->next;
+  if (!self->head) self->tail = NULL;
+
+  free(old_head);
+
+  return slot;
+}
+
+void cache_free_list_free(struct cache_free_list* self) {
+  struct cache_free_list_node* it = self->head;
+  while (it) {
+    struct cache_free_list_node* next = it->next;
+    free(it);
+    it = next;
+  }
+
+  free(self);
+}
 
 void cache_block_free(struct cache_block* self) {
   if (self->free_list) cache_free_list_free(self->free_list);
@@ -30,7 +85,8 @@ int cache_block_init(struct compute_context* ctx, uint8_t type_id, struct cache_
            "failed to register MR");
   // tags are already initialized to 0 by calloc
   block->metadata = try3_p(calloc(block->slot_count, sizeof(*block->metadata)));
-  block->free_list = try3_p(cache_free_list_create(), "failed to create free list");
+  block->free_list =
+    try3_p(cache_free_list_new(0, block->slot_count - 1), "failed to create free list");
   return 0;
 cleanup:
   cache_block_free(block);

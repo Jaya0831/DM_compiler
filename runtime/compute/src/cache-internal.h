@@ -3,11 +3,19 @@
 
 #include "context-internal.h"
 
-struct cache_free_list {
-  // TODO: queue or B-tree
+struct cache_free_list_node {
+  int begin;
+  int back;
+
+  struct cache_free_list_node* next;
 };
 
-struct cache_free_list* cache_free_list_create();
+struct cache_free_list {
+  struct cache_free_list_node* head;
+  struct cache_free_list_node* tail;
+};
+
+struct cache_free_list* cache_free_list_new(int slot_begin, int slot_back);
 void cache_free_list_push(struct cache_free_list* self, int slot);
 // Returns free slot index, or negative value if no free slot is currently available.
 int cache_free_list_pop(struct cache_free_list* self);
